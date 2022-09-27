@@ -14,5 +14,5 @@
 
 - Turn on your Apache Web Server and MySQL Database.
 - Open the path of the app, e.g: http://localhost/crud-app.
-- Use the tables to navigate.
-- Press corresponding buttons to delete, update files and create entries to database.
+- Use the navbar to navigate through tables.
+- Press corresponding buttons to delete, update and create entries to database.
