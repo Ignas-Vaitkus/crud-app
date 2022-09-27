@@ -1,28 +1,49 @@
 <?php
-$servername = 'localhost';
-$username = 'root';
+$hostname = 'localhost';
+$username = 'crud_user';
 $password = 'mysql';
-$dbname = 'company';
-$conn = mysqli_connect($servername, $username, $password, $dbname);
-if (!$conn) {
-    die('Connection failed: ' . mysqli_connect_error());
+$database = 'company';
+
+try {
+    $conn = mysqli_connect($hostname, $username, $password, $database);
+    if (!$conn) {
+        exit('Connection failed: ' . mysqli_connect_error());
+    }
+} catch (Exception $e) {
+    exit('Caught exception: ' . $e->getMessage());
+}
+
+$table = $_GET['table'];
+
+if (!($table == ('Employees' || 'Projects'))) {
+    $table = 'Employees';
+}
+
+if ($table === 'Employees') {
+    $headers = ['ID', 'First Name', 'Last Name'];
+} else {
+    $headers = ['ID', 'Project Name'];
 }
 
 if (isset($_GET['action']) and $_GET['action'] == 'delete') {
-    $sql = 'DELETE FROM Employees WHERE id = ?';
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $_GET['id']);
-    $res = $stmt->execute();
+    $sql = "DELETE FROM $table WHERE id = ?"; //$database.
 
-    $stmt->close();
-    mysqli_close($conn);
+    try {
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            exit();
+        }
+        $stmt->bind_param('i', $_GET['id']);
+        $res = $stmt->execute();
 
-    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
-    die();
+        $stmt->close();
+    } catch (Exception $e) {
+        exit('Caught exception: ' . $e->getMessage());
+    }
 }
 ?>
 <!DOCTYPE html>
-<html lang='en'>
+<html lang='lt'>
 
 <head>
     <meta charset='UTF-8'>
@@ -31,6 +52,35 @@ if (isset($_GET['action']) and $_GET['action'] == 'delete') {
     <style>
         * {
             font-family: 'Trebuchet MS', Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        nav {
+            overflow: hidden;
+            background-color: #333;
+        }
+
+        nav a {
+            float: left;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 17px;
+        }
+
+        nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        nav a.active {
+            background-color: #04AA6D;
+            color: white;
         }
 
         table {
@@ -64,27 +114,46 @@ if (isset($_GET['action']) and $_GET['action'] == 'delete') {
 
 <body>
     <?php
-    $sql = 'SELECT id, firstname, lastname FROM Employees';
+
+    // print('<div>' . $headers . '<div/>');
+
+    // exit(var_dump($headers));
+
+    $sql = "SELECT * FROM $table";
     $result = mysqli_query($conn, $sql);
+
+    print('<nav>
+        <a class="' . ($table === 'Projects' ? 'active' : '') . '" href="?table=Projects">Projects</a>
+        <a class="' . ($table === 'Employees' ? 'active' : '') . '" href="?table=Employees">Employees</a>
+    </nav>');
 
     if (mysqli_num_rows($result) > 0) {
         print('<table>');
         print('<thead>');
-        print('<tr><th>Id</th><th>Name</th><th>Surname</th><th>Actions</th></tr>');
+        print('<tr>');
+
+        foreach ($headers as $header) {
+            print("<th>$header</th>");
+        }
+
+        print('<th>Actions</th></tr>');
         print('</thead>');
         print('<tbody>');
         while ($row = mysqli_fetch_assoc($result)) {
-            print('<tr>'
-                . '<td>' . $row['id'] . '</td>'
-                . '<td>' . $row['firstname'] . '</td>'
-                . '<td>' . $row['lastname'] . '</td>'
-                . '<td>' . '<a href="?action=delete&id='  . $row['id'] . '"><button>DELETE</button></a>' . '</td>'
+            print('<tr>');
+
+            foreach ($row as $cell) {
+                print('<td>' . $cell . '</td>');
+            }
+
+            print('<td>' . '<a href="?table=' . $table . '&action=delete&id='  . $row['id']
+                . '"><button>DELETE</button></a>' . '</td>'
                 . '</tr>');
         }
         print('</tbody>');
         print('</table>');
     } else {
-        echo '0 results';
+        echo '<div>0 results<div/>';
     }
     mysqli_close($conn);
     ?>
