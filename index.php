@@ -14,10 +14,12 @@ try {
     exit('Caught exception: ' . $e->getMessage());
 }
 
-$table = $_GET['table'];
+
+if (isset($_GET['table']))
+    $table = $_GET['table'];
 
 if (!($table == ('Employees' || 'Projects'))) {
-    $table = 'Employees';
+    $table = 'Projects';
 }
 
 if ($table === 'Employees') {
@@ -28,9 +30,6 @@ if ($table === 'Employees') {
 
 if (isset($_GET['action'])) {
     if ($_GET['action'] == 'delete') {
-        $item = substr($table, 0, -1);
-        $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?; DELETE FROM $table WHERE id = ?;"; //$database.
-
         try {
             $item = substr($table, 0, -1);
             $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
@@ -52,29 +51,31 @@ if (isset($_GET['action'])) {
     }
 }
 
-// if ($_POST['action'] === 'update') {
-//     $item = substr($table, 0, -1);
-//     $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?; DELETE FROM $table WHERE id = ?;"; //$database.
+if (isset($_POST['action']) && $_POST['action'] == 'update') {
 
-//     try {
-//         $item = substr($table, 0, -1);
-//         $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
+    try {
+        $item = substr($table, 0, -1);
+        $sql = "UPDATE $table SET";
 
-//         $stmt = $conn->prepare($sql);
-//         $stmt->bind_param('i', $_POST['id']);
-//         $stmt->execute();
-//         $stmt->close();
 
-//         $sql = "DELETE FROM $table WHERE id = ?";
+        if ($table == 'Projects') {
+            $sql .= ' project_name ="' . $_POST['project_name'] . '" ';
+        } elseif ($table == 'Employees') {
+            $sql .= ' firstname = "' . $_POST['firstname']
+                . '", lastname = "' . $_POST['lastname'] . '" ';
+        }
 
-//         $stmt = $conn->prepare($sql);
-//         $stmt->bind_param('i', $_POST['id']);
-//         $stmt->execute();
-//         $stmt->close();
-//     } catch (Exception $e) {
-//         exit('Caught exception: ' . $e->getMessage());
-//     }
-// }
+
+        $sql .= 'WHERE id = ?;';
+
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $_POST['id']);
+        $stmt->execute();
+        $stmt->close();
+    } catch (Exception $e) {
+        exit($sql . 'Caught exception: ' . $e->getMessage());
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang='lt'>
