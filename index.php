@@ -26,7 +26,33 @@ if ($table === 'Employees') {
     $headers = ['ID', 'Project Name', 'Employees Responsible'];
 }
 
-if (isset($_GET['action']) and $_GET['action'] == 'delete') {
+if (isset($_GET['action'])) {
+    if ($_GET['action'] == 'delete') {
+        $item = substr($table, 0, -1);
+        $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?; DELETE FROM $table WHERE id = ?;"; //$database.
+
+        try {
+            $item = substr($table, 0, -1);
+            $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
+
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param('i', $_GET['id']);
+            $stmt->execute();
+            $stmt->close();
+
+            $sql = "DELETE FROM $table WHERE id = ?";
+
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param('i', $_GET['id']);
+            $stmt->execute();
+            $stmt->close();
+        } catch (Exception $e) {
+            exit('Caught exception: ' . $e->getMessage());
+        }
+    }
+}
+
+if ($_POST['action'] === 'update') {
     $item = substr($table, 0, -1);
     $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?; DELETE FROM $table WHERE id = ?;"; //$database.
 
@@ -35,14 +61,14 @@ if (isset($_GET['action']) and $_GET['action'] == 'delete') {
         $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
 
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param('i', $_GET['id']);
+        $stmt->bind_param('i', $_POST['id']);
         $stmt->execute();
         $stmt->close();
 
         $sql = "DELETE FROM $table WHERE id = ?";
 
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param('i', $_GET['id']);
+        $stmt->bind_param('i', $_POST['id']);
         $stmt->execute();
         $stmt->close();
     } catch (Exception $e) {
@@ -121,9 +147,6 @@ if (isset($_GET['action']) and $_GET['action'] == 'delete') {
 </head>
 
 <body>
-    <script>
-
-    </script>
     <?php
 
     print('<nav>
@@ -204,8 +227,8 @@ if (isset($_GET['action']) and $_GET['action'] == 'delete') {
                 print('<td>' . $rows[$i]['lastname'] . '</td>');
             }
 
-            print('<td>' . '<a href="?table=' . $table . '&action=delete&id='  . $rows[$i]['id']
-                . '"><button>DELETE</button></a>' . '</td>'
+            print('<td><div><button class="update ' . $rows[$i]['id'] . '">UPDATE</button></a>' . '<a href="?table=' . $table . '&action=delete&id='  . $rows[$i]['id']
+                . '"><button>DELETE</button></a>' . '</div></td>'
                 . '</tr>');
 
             $i++;
@@ -213,12 +236,52 @@ if (isset($_GET['action']) and $_GET['action'] == 'delete') {
         print('</tbody>');
         print('</table>');
     } else {
-        echo '<div>0 results<div/>';
+        echo '<div>0 results</div>';
     }
     print('<pre>');
 
     mysqli_close($conn);
     ?>
+    <script>
+        const table = '<?php echo $table; ?>';
+
+        const updateHandler = (e) => {
+            const id = e.target.classList[1];
+
+            console.log(e.target.classList[1])
+
+            const cell = e.target.parentElement.parentElement;
+
+            let html = `<form action="./" method="POST">
+            <input type="text" style="display: none;" name="action" value="update">
+            <input type="text" style="display: none;" name="id" value="${id}">`
+
+
+            if (table === 'Projects') {
+                const projectName = cell.previousSibling.previousSibling.innerHTML;
+                html += `<input type="text" name="project_name" value="${projectName}">`
+
+            } else {
+                const firstName = cell.previousSibling.previousSibling.innerHTML;
+                const lastName = cell.previousSibling.innerHTML;
+
+                html += `<input type="text" name="firstname" value="${firstName}">
+                <input type="text" name="lastname" value="${lastName}">`;
+            }
+
+            html += `
+            <button type="submit" style="background-color: lightred;">CONFIRM</button>
+            </form>`;
+
+            cell.innerHTML += html;
+        }
+
+        const elements = document.getElementsByClassName("update");
+
+        Array.from(elements).forEach(element => {
+            element.addEventListener('click', updateHandler);
+        });
+    </script>
 </body>
 
 </html>
