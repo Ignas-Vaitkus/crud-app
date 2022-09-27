@@ -52,29 +52,29 @@ if (isset($_GET['action'])) {
     }
 }
 
-if ($_POST['action'] === 'update') {
-    $item = substr($table, 0, -1);
-    $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?; DELETE FROM $table WHERE id = ?;"; //$database.
+// if ($_POST['action'] === 'update') {
+//     $item = substr($table, 0, -1);
+//     $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?; DELETE FROM $table WHERE id = ?;"; //$database.
 
-    try {
-        $item = substr($table, 0, -1);
-        $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
+//     try {
+//         $item = substr($table, 0, -1);
+//         $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
 
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('i', $_POST['id']);
-        $stmt->execute();
-        $stmt->close();
+//         $stmt = $conn->prepare($sql);
+//         $stmt->bind_param('i', $_POST['id']);
+//         $stmt->execute();
+//         $stmt->close();
 
-        $sql = "DELETE FROM $table WHERE id = ?";
+//         $sql = "DELETE FROM $table WHERE id = ?";
 
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('i', $_POST['id']);
-        $stmt->execute();
-        $stmt->close();
-    } catch (Exception $e) {
-        exit('Caught exception: ' . $e->getMessage());
-    }
-}
+//         $stmt = $conn->prepare($sql);
+//         $stmt->bind_param('i', $_POST['id']);
+//         $stmt->execute();
+//         $stmt->close();
+//     } catch (Exception $e) {
+//         exit('Caught exception: ' . $e->getMessage());
+//     }
+// }
 ?>
 <!DOCTYPE html>
 <html lang='lt'>
@@ -252,7 +252,7 @@ if ($_POST['action'] === 'update') {
 
             const cell = e.target.parentElement.parentElement;
 
-            let html = `<form action="./" method="POST">
+            let html = `<form action="./?table=<?php echo $table ?>" method="POST">
             <input type="text" style="display: none;" name="action" value="update">
             <input type="text" style="display: none;" name="id" value="${id}">`
 
