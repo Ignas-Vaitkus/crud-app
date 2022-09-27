@@ -1,4 +1,5 @@
 <?php
+
 $hostname = 'localhost';
 $username = 'crud_user';
 $password = 'mysql';
@@ -22,20 +23,27 @@ if (!($table == ('Employees' || 'Projects'))) {
 if ($table === 'Employees') {
     $headers = ['ID', 'First Name', 'Last Name'];
 } else {
-    $headers = ['ID', 'Project Name'];
+    $headers = ['ID', 'Project Name', 'Employees Responsible'];
 }
 
 if (isset($_GET['action']) and $_GET['action'] == 'delete') {
-    $sql = "DELETE FROM $table WHERE id = ?"; //$database.
+    $item = substr($table, 0, -1);
+    $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?; DELETE FROM $table WHERE id = ?;"; //$database.
 
     try {
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            exit();
-        }
-        $stmt->bind_param('i', $_GET['id']);
-        $res = $stmt->execute();
+        $item = substr($table, 0, -1);
+        $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
 
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $_GET['id']);
+        $stmt->execute();
+        $stmt->close();
+
+        $sql = "DELETE FROM $table WHERE id = ?";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $_GET['id']);
+        $stmt->execute();
         $stmt->close();
     } catch (Exception $e) {
         exit('Caught exception: ' . $e->getMessage());
@@ -113,19 +121,41 @@ if (isset($_GET['action']) and $_GET['action'] == 'delete') {
 </head>
 
 <body>
+    <script>
+
+    </script>
     <?php
-
-    // print('<div>' . $headers . '<div/>');
-
-    // exit(var_dump($headers));
-
-    $sql = "SELECT * FROM $table";
-    $result = mysqli_query($conn, $sql);
 
     print('<nav>
         <a class="' . ($table === 'Projects' ? 'active' : '') . '" href="?table=Projects">Projects</a>
         <a class="' . ($table === 'Employees' ? 'active' : '') . '" href="?table=Employees">Employees</a>
     </nav>');
+
+    $sql = "SELECT
+        Projects.id, 
+        Projects.project_name,  #GROUP_CONCAT(DISTINCT Projects.project_name),
+        Employees.firstname,    #GROUP_CONCAT(DISTINCT Employees.firstname),
+        Employees.lastname      #GROUP_CONCAT(DISTINCT Employees.lastname)
+    FROM Projects               #GROUP_CONCAT does not work on Joined tables
+    LEFT JOIN Project_Employee
+    ON Projects.id = Project_Employee.project_id
+    LEFT JOIN Employees
+    ON Employees.id = Project_Employee.employee_id;
+            SELECT * FROM Employees;";
+
+    $result = mysqli_multi_query($conn, $sql);
+
+    $projects = mysqli_store_result($conn);
+    mysqli_next_result($conn);
+    $employees = mysqli_store_result($conn);
+
+    if ($table === 'Projects') {
+        $result = $projects;
+        // mysqli_next_result($conn);
+        // $project = mysqli_store_result($conn);
+    } else {
+        $result = $employees;
+    }
 
     if (mysqli_num_rows($result) > 0) {
         print('<table>');
@@ -139,22 +169,54 @@ if (isset($_GET['action']) and $_GET['action'] == 'delete') {
         print('<th>Actions</th></tr>');
         print('</thead>');
         print('<tbody>');
-        while ($row = mysqli_fetch_assoc($result)) {
-            print('<tr>');
 
-            foreach ($row as $cell) {
-                print('<td>' . $cell . '</td>');
+
+        while ($row = mysqli_fetch_assoc($result)) {
+            $rows[] = $row;
+        }
+
+        $i = 0;
+
+        while ($i < count($rows)) {
+
+            print('<tr id="' . $i .  '">');
+
+
+            print('<td>' . $rows[$i]['id'] . '</td>');
+
+            if ($table === 'Projects') {
+                print('<td>' . $rows[$i]['project_name'] . '</td>');
+                print('<td>');
+                $temp = $rows[$i]['id'];
+
+                //Print employees in one cell
+                $changed = false;
+                do {
+                    print('<div>' . $rows[$i]['firstname'] . ' ' . $rows[$i]['lastname'] . '</div>');
+                    $temp = $rows[$i]['id'];
+
+                    $rows[$i]['id'] === $rows[$i + 1]['id'] ? $i++ : $changed = true;
+                } while (!$changed);
+
+                print('</td>');
+            } elseif ($table === 'Employees') {
+                print('<td>' . $rows[$i]['firstname'] . '</td>');
+                print('<td>' . $rows[$i]['lastname'] . '</td>');
             }
 
-            print('<td>' . '<a href="?table=' . $table . '&action=delete&id='  . $row['id']
+            print('<td>' . '<a href="?table=' . $table . '&action=delete&id='  . $rows[$i]['id']
                 . '"><button>DELETE</button></a>' . '</td>'
                 . '</tr>');
+
+            $i++;
         }
         print('</tbody>');
         print('</table>');
     } else {
         echo '<div>0 results<div/>';
     }
+    print('<pre>');
+
     mysqli_close($conn);
     ?>
 </body>
