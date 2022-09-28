@@ -30,26 +30,24 @@ if ($table === 'Employees') {
     $headers = ['ID', 'Project Name', 'Employees Responsible'];
 }
 
-if (isset($_GET['action'])) {
-    if ($_GET['action'] == 'delete') {
-        try {
-            $item = substr($table, 0, -1);
-            $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
+if (isset($_GET['action']) && ($_GET['action'] == 'delete')) {
+    try {
+        $item = substr($table, 0, -1);
+        $sql = "DELETE FROM Project_Employee WHERE $item" . "_id = ?";
 
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param('i', $_GET['id']);
-            $stmt->execute();
-            $stmt->close();
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $_GET['id']);
+        $stmt->execute();
+        $stmt->close();
 
-            $sql = "DELETE FROM $table WHERE id = ?";
+        $sql = "DELETE FROM $table WHERE id = ?";
 
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param('i', $_GET['id']);
-            $stmt->execute();
-            $stmt->close();
-        } catch (Exception $e) {
-            exit('Caught exception: ' . $e->getMessage());
-        }
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $_GET['id']);
+        $stmt->execute();
+        $stmt->close();
+    } catch (Exception $e) {
+        exit('Caught exception: ' . $e->getMessage());
     }
 }
 
@@ -104,6 +102,37 @@ if (isset($_POST['action']) && $_POST['action'] == 'insert') {
         exit('Caught exception: ' . $e->getMessage());
     }
 }
+
+//Convert assign id to integer and validate if a valid number was entered
+
+function convert_id_to_int($id)
+{
+    if (isset($id)) {
+        $id = (int) $id;
+        if ($id <= 0)
+            exit('assignID or assignTO must be higher than 0 or is not a number');
+        return $id;
+    }
+}
+
+$_GET['assignID'] = convert_id_to_int($_GET['assignID']);
+$_GET['assignTO'] = convert_id_to_int($_GET['assignTO']);
+
+//Assign new entry to Project_Employee table
+
+if (isset($_GET['assignID']) && isset($_GET['assignTO'])) {
+    try {
+        $sql = "INSERT INTO Project_Employee VALUES (?, ?)";
+        $stmt = $conn->prepare($sql);
+        //Columns (project_id, employee_id)
+        $stmt->bind_param('ii', $_GET['assignTO'], $_GET['assignID']);
+        $stmt->execute();
+        $stmt->close();
+    } catch (Exception $e) {
+        exit('Caught exception: ' . $e->getMessage());
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang='lt'>
@@ -175,103 +204,108 @@ if (isset($_POST['action']) && $_POST['action'] == 'insert') {
     </style>
 </head>
 
-<body>
+<body id="table" class="<?php echo $table ?>">
     <?php
 
     print('<nav>
-        <a class="' . ($table === 'Projects' ? 'active' : '') . '" href="?table=Projects">Projects</a>
-        <a class="' . ($table === 'Employees' ? 'active' : '') . '" href="?table=Employees">Employees</a>
+        <a class="' . ($table === 'Projects' ? 'active' : '')
+        . '" href="?table=Projects">Projects</a>
+        <a class="' . ($table === 'Employees' ? 'active' : '')
+        . '" href="?table=Employees">Employees</a>
     </nav>');
 
-    $sql = "SELECT
+    //A better practice would be to modularize this code for rendering the HTML
+    //into different files. (And not have an 100 line long if statement)
+
+    if (isset($_GET['table']) || ((isset($_GET['assignID']) && isset($_GET['assignTO'])))) {
+
+        $sql = "SELECT
         Projects.id, 
         Projects.project_name,  #GROUP_CONCAT(DISTINCT Projects.project_name),
         Employees.firstname,    #GROUP_CONCAT(DISTINCT Employees.firstname),
         Employees.lastname      #GROUP_CONCAT(DISTINCT Employees.lastname)
-    FROM Projects               #GROUP_CONCAT does not work on Joined tables
-    LEFT JOIN Project_Employee
-    ON Projects.id = Project_Employee.project_id
-    LEFT JOIN Employees
-    ON Employees.id = Project_Employee.employee_id;
-            SELECT * FROM Employees;";
+        FROM Projects           #GROUP_CONCAT does not work on Joined tables
+        LEFT JOIN Project_Employee
+        ON Projects.id = Project_Employee.project_id
+        LEFT JOIN Employees
+        ON Employees.id = Project_Employee.employee_id;
+        SELECT * FROM Employees;";
 
-    $result = mysqli_multi_query($conn, $sql);
+        $result = mysqli_multi_query($conn, $sql);
 
-    $projects = mysqli_store_result($conn);
-    mysqli_next_result($conn);
-    $employees = mysqli_store_result($conn);
+        $projects = mysqli_store_result($conn);
+        mysqli_next_result($conn);
+        $employees = mysqli_store_result($conn);
 
-    if ($table === 'Projects') {
-        $result = $projects;
-        // mysqli_next_result($conn);
-        // $project = mysqli_store_result($conn);
-    } else {
-        $result = $employees;
-    }
-
-    if (mysqli_num_rows($result) > 0) {
-        print('<table>');
-        print('<thead>');
-        print('<tr>');
-
-        foreach ($headers as $header) {
-            print("<th>$header</th>");
+        if ($table === 'Projects') {
+            $result = $projects;
+        } else {
+            $result = $employees;
         }
 
-        print('<th>Actions</th></tr>');
-        print('</thead>');
-        print('<tbody>');
+        if (mysqli_num_rows($result) > 0) {
+            print('<table>');
+            print('<thead>');
+            print('<tr>');
 
-
-        while ($row = mysqli_fetch_assoc($result)) {
-            $rows[] = $row;
-        }
-
-        $i = 0;
-
-        while ($i < count($rows)) {
-
-            print('<tr id="' . $i .  '">');
-
-
-            print('<td>' . $rows[$i]['id'] . '</td>');
-
-            if ($table === 'Projects') {
-                print('<td>' . $rows[$i]['project_name'] . '</td>');
-                print('<td>');
-                $temp = $rows[$i]['id'];
-
-                //Print employees in one cell
-                $different_project = false;
-                do {
-                    print('<div>' . $rows[$i]['firstname'] . ' ' . $rows[$i]['lastname'] . '</div>');
-                    $temp = $rows[$i]['id'];
-
-                    $rows[$i]['id'] === $rows[$i + 1]['id'] ? $i++ : $different_project = true;
-                } while (!$different_project);
-
-                print('</td>');
-            } elseif ($table === 'Employees') {
-                print('<td>' . $rows[$i]['firstname'] . '</td>');
-                print('<td>' . $rows[$i]['lastname'] . '</td>');
+            foreach ($headers as $header) {
+                print("<th>$header</th>");
             }
 
-            print('<td><div><button class="update ' . $rows[$i]['id'] . '">UPDATE</button></a>' . '<a href="?table=' . $table . '&action=delete&id='  . $rows[$i]['id']
-                . '"><button>DELETE</button></a>' . '</div></td>'
-                . '</tr>');
+            print('<th>Actions</th></tr>');
+            print('</thead>');
+            print('<tbody>');
 
-            $i++;
+
+            while ($row = mysqli_fetch_assoc($result)) {
+                $rows[] = $row;
+            }
+
+            $i = 0;
+
+            while ($i < count($rows)) {
+
+                print('<tr id="' . $i .  '">');
+
+
+                print('<td>' . $rows[$i]['id'] . '</td>');
+
+                if ($table === 'Projects') {
+                    print('<td>' . $rows[$i]['project_name'] . '</td>');
+                    print('<td>');
+                    $temp = $rows[$i]['id'];
+
+                    //Print employees in one cell
+                    $different_project = false;
+                    do {
+                        print('<div>' . $rows[$i]['firstname'] . ' ' . $rows[$i]['lastname'] . '</div>');
+                        $temp = $rows[$i]['id'];
+
+                        $rows[$i]['id'] === $rows[$i + 1]['id'] ? $i++ : $different_project = true;
+                    } while (!$different_project);
+
+                    print('</td>');
+                } elseif ($table === 'Employees') {
+                    print('<td>' . $rows[$i]['firstname'] . '</td>');
+                    print('<td>' . $rows[$i]['lastname'] . '</td>');
+                }
+
+                print('<td><div><button class="update ' . $rows[$i]['id'] . '">UPDATE</button>' . '<a href="?table=' . $table . '&action=delete&id='  . $rows[$i]['id']
+                    . '"><button>DELETE</button></a>'
+                    . ($table == 'Employees'
+                        ? ('<a href="?assignID=' . $rows[$i]['id'] . '"><button>ASSIGN PROJECT</button></a>') : '')
+                    . '</div></td></tr>');
+
+                $i++;
+            }
+            print('</tbody>');
+            print('</table>');
+        } else {
+            echo '<div>0 results</div>';
         }
-        print('</tbody>');
-        print('</table>');
-    } else {
-        echo '<div>0 results</div>';
-    }
-    mysqli_close($conn);
-    ?>
-    <form action="./?table=<?php echo $table ?>" method="POST">
-        <input type="text" name="action" value="insert" style="display: none;">
-        <?php
+
+        print('<form action="./?table=' . $table . '" method="POST">');
+        print('<input type="text" name="action" value="insert" style="display: none;">');
         if ($table == 'Projects') {
             print('<div>Please type a project name to add an entry, note that project name cannot be blank!</div>');
             print('<input type="text" name="project_name" placeholder="Project Name">');
@@ -280,19 +314,66 @@ if (isset($_POST['action']) && $_POST['action'] == 'insert') {
             print('<input type="text" name="firstname" placeholder="First Name">');
             print('<input type="text" name="lastname" placeholder="Last Name">');
         }
-        ?>
-        <button type="submit">ADD</button>
-    </form>
+        print('<button type="submit">ADD</button>');
+        print('</form>');
+    } elseif (gettype($_GET['assignID']) == 'integer') {
+
+        //This query selects projects that an employee is not assigned to
+
+        $sql = 'SELECT Projects.id,
+        Projects.project_name
+        FROM Projects
+        WHERE id NOT IN (
+            SELECT Projects.id
+            FROM Projects
+            LEFT JOIN Project_Employee
+            ON Projects.id = Project_Employee.project_id
+            WHERE (Project_Employee.employee_id = '
+            . $_GET['assignID'] . '));';
+
+        $result = mysqli_query($conn, $sql);
+
+        if (mysqli_num_rows($result) > 0) {
+            print('<table>');
+            print('<thead>');
+            print('<tr>');
+            print("<th>Id</th>");
+            print("<th>Project Name</th>");
+            print('<th>Actions</th></tr>');
+            print('</thead>');
+            print('<tbody>');
+
+
+
+            while ($row = mysqli_fetch_assoc($result)) {
+                print('<tr>');
+                print('<td>' . $row['id'] . '</td>');
+                print('<td>' . $row['project_name'] . '</td>');
+                print('<td><div><a href="?table=Employees&assignID=' . $_GET['assignID'] . '&assignTO=' . $row['id'] . '"><button>ASSIGN TO</button></a>');
+                print('</tr>');
+            }
+
+            //Selected employee name on page could be showed with an additional select query
+
+            print('</tbody>');
+        } else {
+            print('<div>No projects to assign to!</div>');
+        }
+    }
+    mysqli_close($conn);
+    ?>
 
 
 
 
-    <script>
+    <script type="text/javascript">
         // This script renders the update form for entries
         // Note that there is no way to close the from after opening it (Delayed for future)
         // Another note there is no data validation built in the form
 
-        const table = '<?php echo $table; ?>';
+        const table = document.getElementById('table').className;
+
+        console.log();
 
         const updateHandler = (e) => {
             const id = e.target.classList[1];
@@ -301,12 +382,12 @@ if (isset($_POST['action']) && $_POST['action'] == 'insert') {
 
             const cell = e.target.parentElement.parentElement;
 
-            let html = `<form action="./?table=<?php echo $table ?>" method="POST">
+            let html = `<form action="./?table=${table}" method="POST">
             <input type="text" style="display: none;" name="action" value="update">
             <input type="text" style="display: none;" name="id" value="${id}">`
 
 
-            if (table === 'Projects') {
+            if (table == 'Projects') {
                 const projectName = cell.previousSibling.previousSibling.innerHTML;
                 html += `<input type="text" name="project_name" value="${projectName}">`
 
