@@ -18,7 +18,9 @@ try {
 if (isset($_GET['table']))
     $table = $_GET['table'];
 
-if (!($table == ('Employees' || 'Projects'))) {
+
+//If table is neither Employees nor Projects, set Projects
+if (!($table == 'Employees' || $table == 'Projects')) {
     $table = 'Projects';
 }
 
@@ -51,6 +53,11 @@ if (isset($_GET['action'])) {
     }
 }
 
+//This boolean will store wether something was stored or not in the update
+
+//Prioritizing Project and Employee addition with project assignment
+//$Field_was_updated = (isset($_POST['Project']) && $_POST['Project'] == '');
+
 if (isset($_POST['action']) && $_POST['action'] == 'update') {
 
     try {
@@ -65,7 +72,6 @@ if (isset($_POST['action']) && $_POST['action'] == 'update') {
                 . '", lastname = "' . $_POST['lastname'] . '" ';
         }
 
-
         $sql .= 'WHERE id = ?;';
 
         $stmt = $conn->prepare($sql);
@@ -73,7 +79,29 @@ if (isset($_POST['action']) && $_POST['action'] == 'update') {
         $stmt->execute();
         $stmt->close();
     } catch (Exception $e) {
-        exit($sql . 'Caught exception: ' . $e->getMessage());
+        exit('Caught exception: ' . $e->getMessage());
+    }
+}
+
+if (isset($_POST['action']) && $_POST['action'] == 'insert') {
+    try {
+        if ($table == 'Projects') {
+
+            $sql = "INSERT INTO $table (project_name) VALUES (?)";
+            $stmt = $conn->prepare($sql);
+            $project_name = ucfirst($_POST['project_name']);
+            $stmt->bind_param('s', $project_name);
+        } elseif ($table == 'Employees') {
+            $sql = "INSERT INTO $table (firstname, lastname) VALUES (?, ?)";
+            $stmt = $conn->prepare($sql);
+            $firstname = ucfirst($_POST['firstname']);
+            $lastname = ucfirst($_POST['lastname']);
+            $stmt->bind_param('ss', $firstname, $lastname);
+        }
+        $stmt->execute();
+        $stmt->close();
+    } catch (Exception $e) {
+        exit('Caught exception: ' . $e->getMessage());
     }
 }
 ?>
@@ -239,10 +267,26 @@ if (isset($_POST['action']) && $_POST['action'] == 'update') {
     } else {
         echo '<div>0 results</div>';
     }
-    print('<pre>');
-
     mysqli_close($conn);
     ?>
+    <form action="./?table=<?php echo $table ?>" method="POST">
+        <input type="text" name="action" value="insert" style="display: none;">
+        <?php
+        if ($table == 'Projects') {
+            print('<div>Please type a project name to add an entry, note that project name cannot be blank!</div>');
+            print('<input type="text" name="project_name" placeholder="Project Name">');
+        } elseif ($table == 'Employees') {
+            print('<div>Please type an employee name to add an entry, note that the names cannot be blank!</div>');
+            print('<input type="text" name="firstname" placeholder="First Name">');
+            print('<input type="text" name="lastname" placeholder="Last Name">');
+        }
+        ?>
+        <button type="submit">ADD</button>
+    </form>
+
+
+
+
     <script>
         const table = '<?php echo $table; ?>';
 
