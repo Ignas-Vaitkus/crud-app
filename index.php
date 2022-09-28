@@ -288,6 +288,10 @@ if (isset($_POST['action']) && $_POST['action'] == 'insert') {
 
 
     <script>
+        // This script renders the update form for entries
+        // Note that there is no way to close the from after opening it (Delayed for future)
+        // Another note there is no data validation built in the form
+
         const table = '<?php echo $table; ?>';
 
         const updateHandler = (e) => {
