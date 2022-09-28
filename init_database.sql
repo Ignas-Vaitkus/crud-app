@@ -1,4 +1,4 @@
-DROP DATABASE IF EXISTS company;
+DROP DATABASE IF EXISTS company_crud_user;
 
 CREATE DATABASE company_crud_user DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_lithuanian_ci;
 
