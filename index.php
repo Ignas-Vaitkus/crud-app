@@ -242,12 +242,12 @@ if (isset($_POST['action']) && $_POST['action'] == 'insert') {
                 $temp = $rows[$i]['id'];
 
                 //Print employees in one cell
-                $changed = false;
+                $different_project = false;
                 do {
                     print('<div>' . $rows[$i]['firstname'] . ' ' . $rows[$i]['lastname'] . '</div>');
                     $temp = $rows[$i]['id'];
 
-                    $rows[$i]['id'] === $rows[$i + 1]['id'] ? $i++ : $changed = true;
+                    $rows[$i]['id'] === $rows[$i + 1]['id'] ? $i++ : $different_project = true;
                 } while (!$changed);
 
                 print('</td>');
