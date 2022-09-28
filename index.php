@@ -248,7 +248,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'insert') {
                     $temp = $rows[$i]['id'];
 
                     $rows[$i]['id'] === $rows[$i + 1]['id'] ? $i++ : $different_project = true;
-                } while (!$changed);
+                } while (!$different_project);
 
                 print('</td>');
             } elseif ($table === 'Employees') {
