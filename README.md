@@ -9,6 +9,7 @@
 
 - Clone the repository to your xampp localhost path.
 - Run init_database.sql script on MySql Workbench to initialize the database.
+  NOTE: There there are two DROP commands in the script! Check to see if it will not affect your existing database or user.
 
 ### How to Use
 
