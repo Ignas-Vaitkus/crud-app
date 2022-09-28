@@ -20,7 +20,7 @@ if (isset($_GET['table']))
 
 
 //If table is neither Employees nor Projects, set Projects
-if (!($table == 'Employees' || $table == 'Projects')) {
+if (!isset($table) || !($table == 'Employees' || $table == 'Projects')) {
     $table = 'Projects';
 }
 
@@ -115,8 +115,11 @@ function convert_id_to_int($id)
     }
 }
 
-$_GET['assignID'] = convert_id_to_int($_GET['assignID']);
-$_GET['assignTO'] = convert_id_to_int($_GET['assignTO']);
+
+if (isset($_GET['assignID']))
+    $_GET['assignID'] = convert_id_to_int($_GET['assignID']);
+if (isset($_GET['assignTO']))
+    $_GET['assignTO'] = convert_id_to_int($_GET['assignTO']);
 
 //Assign new entry to Project_Employee table
 
@@ -217,7 +220,7 @@ if (isset($_GET['assignID']) && isset($_GET['assignTO'])) {
     //A better practice would be to modularize this code for rendering the HTML
     //into different files. (And not have an 100 line long if statement)
 
-    if (isset($_GET['table']) || ((isset($_GET['assignID']) && isset($_GET['assignTO'])))) {
+    if ((!isset($_GET['assignID']) && !isset($_GET['assignTO'])) || (isset($_GET['assignID']) && isset($_GET['assignTO']))) {
 
         $sql = "SELECT
         Projects.id, 
@@ -281,7 +284,10 @@ if (isset($_GET['assignID']) && isset($_GET['assignTO'])) {
                         print('<div>' . $rows[$i]['firstname'] . ' ' . $rows[$i]['lastname'] . '</div>');
                         $temp = $rows[$i]['id'];
 
-                        $rows[$i]['id'] === $rows[$i + 1]['id'] ? $i++ : $different_project = true;
+                        (isset($rows[$i + 1]['id'])
+                            && ($rows[$i]['id'] === $rows[$i + 1]['id']))
+                            ? $i++
+                            : $different_project = true;
                     } while (!$different_project);
 
                     print('</td>');
@@ -316,7 +322,7 @@ if (isset($_GET['assignID']) && isset($_GET['assignTO'])) {
         }
         print('<button type="submit">ADD</button>');
         print('</form>');
-    } elseif (gettype($_GET['assignID']) == 'integer') {
+    } elseif (isset($_GET['assignID']) && gettype($_GET['assignID']) == 'integer') {
 
         //This query selects projects that an employee is not assigned to
 
